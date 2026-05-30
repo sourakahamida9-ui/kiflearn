@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #fff8f0;
+  --foreground: #15121f;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Grain / texture subtile sur les fonds sombres */
+.bg-grain {
+  background-image: radial-gradient(
+      circle at 20% 20%,
+      rgba(255, 93, 59, 0.12),
+      transparent 40%
+    ),
+    radial-gradient(circle at 80% 0%, rgba(45, 125, 210, 0.12), transparent 45%),
+    radial-gradient(circle at 60% 90%, rgba(31, 169, 122, 0.1), transparent 45%);
+}
+
+@layer components {
+  /* Base bouton tactile — gros, plein, ombre "tile" */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4
+      font-display font-semibold text-lg tracking-tight
+      transition-all duration-100 select-none
+      active:translate-y-1 active:shadow-tile-press disabled:opacity-50 disabled:pointer-events-none;
+  }
+  /* Variantes autonomes (incluent la base pour pouvoir être utilisées seules) */
+  .btn-brand {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4
+      font-display font-semibold text-lg tracking-tight transition-all duration-100 select-none
+      active:translate-y-1 active:shadow-tile-press disabled:opacity-50 disabled:pointer-events-none
+      bg-brand text-white shadow-tile hover:bg-brand-deep;
+  }
+  .btn-ink {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4
+      font-display font-semibold text-lg tracking-tight transition-all duration-100 select-none
+      active:translate-y-1 active:shadow-tile-press disabled:opacity-50 disabled:pointer-events-none
+      bg-ink text-paper shadow-tile hover:bg-ink-soft;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4
+      font-display font-semibold text-lg tracking-tight transition-all duration-100 select-none
+      active:translate-y-1 active:shadow-tile-press disabled:opacity-50 disabled:pointer-events-none
+      border-2 border-ink/15 bg-white text-ink hover:border-ink/40;
+  }
+  .field {
+    @apply w-full rounded-2xl border-2 border-ink/12 bg-white px-5 py-4
+      text-lg outline-none transition-colors
+      focus:border-brand placeholder:text-ink/35;
+  }
+  .card {
+    @apply rounded-3xl border border-ink/8 bg-white p-6 shadow-card;
+  }
+}
