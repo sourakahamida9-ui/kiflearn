@@ -55,14 +55,22 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4
       font-display font-semibold text-lg tracking-tight transition-all duration-100 select-none
       active:translate-y-1 active:shadow-tile-press disabled:opacity-50 disabled:pointer-events-none
-      border-2 border-ink/15 bg-white text-ink hover:border-ink/40;
+      border-2 bg-white text-ink;
+    border-color: rgba(21, 18, 31, 0.15);
+  }
+  .btn-outline:hover {
+    border-color: rgba(21, 18, 31, 0.4);
   }
   .field {
-    @apply w-full rounded-2xl border-2 border-ink/12 bg-white px-5 py-4
-      text-lg outline-none transition-colors
-      focus:border-brand placeholder:text-ink/35;
+    @apply w-full rounded-2xl border-2 bg-white px-5 py-4
+      text-lg outline-none transition-colors focus:border-brand;
+    border-color: rgba(21, 18, 31, 0.12);
+  }
+  .field::placeholder {
+    color: rgba(21, 18, 31, 0.35);
   }
   .card {
-    @apply rounded-3xl border border-ink/8 bg-white p-6 shadow-card;
+    @apply rounded-3xl border bg-white p-6 shadow-card;
+    border-color: rgba(21, 18, 31, 0.08);
   }
 }
