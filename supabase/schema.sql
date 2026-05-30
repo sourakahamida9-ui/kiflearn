@@ -21,6 +21,7 @@ create table if not exists public.quizzes (
   title       text not null,
   description text,
   creator_id  uuid not null references public.profiles(id) on delete cascade,
+  is_public   boolean not null default false,
   created_at  timestamptz not null default now()
 );
 
@@ -48,6 +49,8 @@ create table if not exists public.sessions (
                            check (status in ('lobby','active','question_closed','finished')),
   current_question_index int  not null default -1,
   question_started_at    timestamptz,
+  is_persistent          boolean not null default false,
+  salon_label            text,
   created_at             timestamptz not null default now()
 );
 -- Un code reste unique tant que la session n'est pas terminée
@@ -107,8 +110,11 @@ create trigger on_auth_user_created
 -- FONCTIONS RPC (SECURITY DEFINER)
 -- ----------------------------------------------------------------------
 
--- Crée une session avec un code à 6 chiffres unique (réservé au créateur du quiz)
-create or replace function public.create_session(p_quiz_id uuid)
+-- Crée une session (option salon persistant)
+create or replace function public.create_session(
+  p_quiz_id uuid,
+  p_persistent boolean default false
+)
 returns public.sessions
 language plpgsql security definer set search_path = public as $$
 declare
@@ -121,6 +127,16 @@ begin
     raise exception 'Quiz introuvable ou non autorisé';
   end if;
 
+  if p_persistent then
+    select * into v_session from public.sessions
+     where quiz_id = p_quiz_id and host_id = v_host and is_persistent = true
+       and status <> 'finished'
+     order by created_at desc limit 1;
+    if v_session.id is not null then
+      return v_session;
+    end if;
+  end if;
+
   loop
     v_code := lpad((floor(random() * 1000000))::int::text, 6, '0');
     exit when not exists (
@@ -128,14 +144,22 @@ begin
     );
   end loop;
 
-  insert into public.sessions (quiz_id, host_id, join_code)
-  values (p_quiz_id, v_host, v_code)
+  insert into public.sessions (quiz_id, host_id, join_code, is_persistent, salon_label)
+  values (
+    p_quiz_id, v_host, v_code,
+    coalesce(p_persistent, false),
+    case when p_persistent then 'Salon persistant' else null end
+  )
   returning * into v_session;
   return v_session;
 end; $$;
 
--- Rejoindre une session via le code (sans compte)
-create or replace function public.join_session(p_code text, p_name text)
+-- Rejoindre ou reconnecter une session
+create or replace function public.join_session(
+  p_code text,
+  p_name text,
+  p_participant_id uuid default null
+)
 returns public.participants
 language plpgsql security definer set search_path = public as $$
 declare
@@ -149,9 +173,33 @@ begin
     raise exception 'Code invalide ou session terminée';
   end if;
 
+  if p_participant_id is not null then
+    select * into v_part from public.participants
+     where id = p_participant_id and session_id = v_session.id;
+    if v_part.id is not null then
+      return v_part;
+    end if;
+  end if;
+
   insert into public.participants (session_id, user_name)
   values (v_session.id, nullif(left(trim(p_name), 40), ''))
   returning * into v_part;
+  return v_part;
+end; $$;
+
+-- Reconnexion par ID participant
+create or replace function public.rejoin_participant(p_participant_id uuid)
+returns public.participants
+language plpgsql security definer set search_path = public as $$
+declare
+  v_part    public.participants;
+  v_session public.sessions;
+begin
+  select * into v_part from public.participants where id = p_participant_id;
+  if v_part.id is null then raise exception 'Participant introuvable'; end if;
+  select * into v_session from public.sessions
+   where id = v_part.session_id and status <> 'finished';
+  if v_session.id is null then raise exception 'Session terminée ou introuvable'; end if;
   return v_part;
 end; $$;
 
@@ -216,16 +264,25 @@ drop policy if exists "profiles self update" on public.profiles;
 create policy "profiles self read"   on public.profiles for select using (auth.uid() = id);
 create policy "profiles self update" on public.profiles for update using (auth.uid() = id);
 
--- quizzes (créateur uniquement)
+-- quizzes (créateur + lecture publique marketplace)
 drop policy if exists "quizzes owner all" on public.quizzes;
+drop policy if exists "quizzes public read" on public.quizzes;
 create policy "quizzes owner all" on public.quizzes for all
   using (auth.uid() = creator_id) with check (auth.uid() = creator_id);
+create policy "quizzes public read" on public.quizzes for select
+  using (is_public = true or auth.uid() = creator_id);
 
--- questions (créateur du quiz uniquement, côté table de base)
+-- questions (créateur + quiz publics)
 drop policy if exists "questions owner all" on public.questions;
+drop policy if exists "questions public read" on public.questions;
 create policy "questions owner all" on public.questions for all
   using (exists (select 1 from public.quizzes q where q.id = quiz_id and q.creator_id = auth.uid()))
   with check (exists (select 1 from public.quizzes q where q.id = quiz_id and q.creator_id = auth.uid()));
+create policy "questions public read" on public.questions for select
+  using (
+    exists (select 1 from public.quizzes q where q.id = quiz_id and q.is_public = true)
+    or exists (select 1 from public.quizzes q where q.id = quiz_id and q.creator_id = auth.uid())
+  );
 
 -- sessions : lecture publique (réalisée par les étudiants en temps réel), gestion par l'hôte
 drop policy if exists "sessions read all"    on public.sessions;
@@ -253,9 +310,10 @@ grant usage on schema public to anon, authenticated;
 grant select on public.questions_public to anon, authenticated;
 grant select on public.sessions          to anon, authenticated;
 grant select on public.participants      to anon, authenticated;
-grant execute on function public.join_session(text, text)              to anon, authenticated;
+grant execute on function public.join_session(text, text, uuid)          to anon, authenticated;
+grant execute on function public.rejoin_participant(uuid)              to anon, authenticated;
 grant execute on function public.submit_answer(uuid, uuid, text, int)  to anon, authenticated;
-grant execute on function public.create_session(uuid)                  to authenticated;
+grant execute on function public.create_session(uuid, boolean)         to authenticated;
 
 -- ----------------------------------------------------------------------
 -- REALTIME (diffusion des changements aux clients)

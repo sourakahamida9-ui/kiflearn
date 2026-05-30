@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { TopBar } from "@/components/TopBar";
 import type { Quiz } from "@/lib/types";
+import { BadgeList } from "@/components/BadgeList";
+import { computeBadges } from "@/lib/badges";
 
 type QuizWithCount = Quiz & { question_count: number };
 
@@ -44,16 +46,35 @@ export default function Dashboard() {
         question_count: q.questions?.[0]?.count ?? 0,
       }));
       setQuizzes(mapped);
+
+      const { count: sessionCount } = await supabase
+        .from("sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("host_id", user.id);
+
+      const publicCount = mapped.filter((q) => q.is_public).length;
+      computeBadges({
+        quizCount: mapped.length,
+        sessionCount: sessionCount ?? 0,
+        publicQuizCount: publicCount,
+      });
+
       setLoading(false);
     })();
   }, [router]);
 
-  async function launch(quizId: string) {
+  async function launch(quizId: string, persistent = false) {
     setLaunching(quizId);
     const supabase = createClient();
-    const { data, error } = await supabase.rpc("create_session", {
+    let { data, error } = await supabase.rpc("create_session", {
       p_quiz_id: quizId,
+      p_persistent: persistent,
     });
+    if (error && persistent) {
+      ({ data, error } = await supabase.rpc("create_session", {
+        p_quiz_id: quizId,
+      }));
+    }
     if (error || !data) {
       alert("Impossible de lancer la session : " + (error?.message ?? ""));
       setLaunching(null);
@@ -64,7 +85,7 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="min-h-dvh bg-paper">
+    <main className="min-h-dvh bg-mesh">
       <TopBar name={name} />
 
       <div className="mx-auto max-w-5xl px-5 py-8">
@@ -72,9 +93,21 @@ export default function Dashboard() {
           <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">
             Mes quiz
           </h1>
-          <Link href="/dashboard/quiz/new" className="btn-brand">
-            + Nouveau quiz
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/analytics" className="btn-outline">
+              Analytics
+            </Link>
+            <Link href="/marketplace" className="btn-outline">
+              Marketplace
+            </Link>
+            <Link href="/dashboard/quiz/new" className="btn-brand">
+              + Nouveau quiz
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <BadgeList />
         </div>
 
         {loading ? (
@@ -107,17 +140,24 @@ export default function Dashboard() {
                   {q.question_count} question
                   {q.question_count > 1 ? "s" : ""}
                 </p>
-                <div className="mt-5 flex gap-2 pt-1">
+                <div className="mt-5 flex flex-col gap-2 pt-1">
                   <button
-                    onClick={() => launch(q.id)}
+                    onClick={() => launch(q.id, false)}
                     disabled={q.question_count === 0 || launching === q.id}
-                    className="btn-brand flex-1 py-3 text-base"
+                    className="btn-brand w-full py-3 text-base"
                   >
-                    {launching === q.id ? "..." : "▶ Lancer"}
+                    {launching === q.id ? "..." : "▶ Session live"}
+                  </button>
+                  <button
+                    onClick={() => launch(q.id, true)}
+                    disabled={q.question_count === 0 || launching === q.id}
+                    className="btn-outline w-full py-3 text-base"
+                  >
+                    Salon persistant
                   </button>
                   <Link
                     href={`/dashboard/quiz/${q.id}`}
-                    className="btn-outline px-4 py-3 text-base"
+                    className="btn-outline w-full py-3 text-center text-base"
                   >
                     Modifier
                   </Link>

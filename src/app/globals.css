@@ -3,8 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --background: #fff8f0;
-  --foreground: #15121f;
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --brand: #2563eb;
+  --brand-deep: #1d4ed8;
 }
 
 html {
@@ -16,61 +18,60 @@ body {
   color: var(--foreground);
   font-family: var(--font-body), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
 }
 
-/* Grain / texture subtile sur les fonds sombres */
-.bg-grain {
-  background-image: radial-gradient(
-      circle at 20% 20%,
-      rgba(255, 93, 59, 0.12),
-      transparent 40%
-    ),
-    radial-gradient(circle at 80% 0%, rgba(45, 125, 210, 0.12), transparent 45%),
-    radial-gradient(circle at 60% 90%, rgba(31, 169, 122, 0.1), transparent 45%);
+/* Fond page — mesh bleu doux */
+.bg-mesh {
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 10% -10%, rgba(37, 99, 235, 0.18), transparent),
+    radial-gradient(ellipse 60% 50% at 90% 0%, rgba(96, 165, 250, 0.12), transparent),
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(37, 99, 235, 0.08), transparent);
+}
+
+/* Carte sombre élégante */
+.bg-panel-dark {
+  background: linear-gradient(145deg, #0a0a0a 0%, #171717 50%, #1e3a8a 100%);
+  box-shadow: 0 24px 48px rgba(10, 10, 10, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
 }
 
 @layer components {
-  /* Base bouton tactile — gros, plein, ombre "tile" */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4
-      font-display font-semibold text-lg tracking-tight
-      transition-all duration-100 select-none
-      active:translate-y-1 active:shadow-tile-press disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-btn px-5 py-3.5
+      font-semibold text-base transition-all duration-200 select-none
+      disabled:opacity-45 disabled:pointer-events-none;
   }
-  /* Variantes autonomes (incluent la base pour pouvoir être utilisées seules) */
+
   .btn-brand {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4
-      font-display font-semibold text-lg tracking-tight transition-all duration-100 select-none
-      active:translate-y-1 active:shadow-tile-press disabled:opacity-50 disabled:pointer-events-none
-      bg-brand text-white shadow-tile hover:bg-brand-deep;
+    @apply btn bg-brand text-white shadow-soft hover:bg-brand-deep hover:shadow-card active:scale-[0.98];
   }
+
   .btn-ink {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4
-      font-display font-semibold text-lg tracking-tight transition-all duration-100 select-none
-      active:translate-y-1 active:shadow-tile-press disabled:opacity-50 disabled:pointer-events-none
-      bg-ink text-paper shadow-tile hover:bg-ink-soft;
+    @apply btn bg-ink text-white hover:bg-ink-soft active:scale-[0.98];
   }
+
   .btn-outline {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4
-      font-display font-semibold text-lg tracking-tight transition-all duration-100 select-none
-      active:translate-y-1 active:shadow-tile-press disabled:opacity-50 disabled:pointer-events-none
-      border-2 bg-white text-ink;
-    border-color: rgba(21, 18, 31, 0.15);
+    @apply btn border border-ink/10 bg-white text-ink shadow-soft
+      hover:border-brand/30 hover:text-brand active:scale-[0.98];
   }
-  .btn-outline:hover {
-    border-color: rgba(21, 18, 31, 0.4);
+
+  .btn-ghost {
+    @apply btn text-ink-muted hover:bg-ink/5 hover:text-ink;
   }
+
   .field {
-    @apply w-full rounded-2xl border-2 bg-white px-5 py-4
-      text-lg outline-none transition-colors focus:border-brand;
-    border-color: rgba(21, 18, 31, 0.12);
+    @apply w-full rounded-btn border border-ink/10 bg-white px-4 py-3.5 text-base text-ink
+      outline-none transition-all placeholder:text-ink-muted/60
+      focus:border-brand focus:ring-4 focus:ring-brand/15;
   }
-  .field::placeholder {
-    color: rgba(21, 18, 31, 0.35);
-  }
+
   .card {
-    @apply rounded-3xl border bg-white p-6 shadow-card;
-    border-color: rgba(21, 18, 31, 0.08);
+    @apply rounded-card border border-ink/[0.06] bg-white p-6 shadow-soft
+      transition-shadow hover:shadow-card;
+  }
+
+  .badge-pill {
+    @apply inline-flex items-center rounded-full bg-brand-light px-3.5 py-1.5
+      text-sm font-semibold text-brand-deep;
   }
 }

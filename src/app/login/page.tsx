@@ -61,7 +61,7 @@ function LoginInner() {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-paper px-5 py-10">
+    <main className="bg-mesh grid min-h-dvh place-items-center px-5 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 flex justify-center">
           <Link href="/">
@@ -117,12 +117,12 @@ function LoginInner() {
             />
 
             {error && (
-              <p className="rounded-xl bg-ans-a/10 px-4 py-3 text-sm text-ans-a">
+              <p className="rounded-xl border border-brand/30 bg-brand-light px-4 py-3 text-sm text-brand-deep">
                 {error}
               </p>
             )}
             {info && (
-              <p className="rounded-xl bg-ans-d/10 px-4 py-3 text-sm text-ans-d">
+              <p className="rounded-xl border border-brand/20 bg-brand-light px-4 py-3 text-sm text-brand">
                 {info}
               </p>
             )}

@@ -15,6 +15,7 @@ export interface Quiz {
   title: string;
   description: string | null;
   creator_id: string;
+  is_public?: boolean;
   created_at: string;
 }
 
@@ -53,6 +54,8 @@ export interface Session {
   status: SessionStatus;
   current_question_index: number;
   question_started_at: string | null;
+  is_persistent?: boolean;
+  salon_label?: string | null;
   created_at: string;
 }
 

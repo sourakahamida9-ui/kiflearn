@@ -4,9 +4,13 @@
   "description": "Quiz live data-first pour l'Afrique",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#15121f",
-  "theme_color": "#15121f",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Rejoindre", "url": "/join" },
+    { "name": "Mes quiz", "url": "/dashboard" }
   ]
 }

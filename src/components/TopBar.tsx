@@ -16,21 +16,29 @@ export function TopBar({ name }: { name?: string | null }) {
   }
 
   return (
-    <header className="border-b border-ink/8 bg-white">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+    <header className="sticky top-0 z-40 border-b border-ink/[0.06] bg-white/80 backdrop-blur-lg">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
         <Link href="/dashboard">
-          <Logo className="text-xl" />
+          <Logo className="text-lg" />
         </Link>
-        <div className="flex items-center gap-4">
+        <nav className="hidden items-center gap-1 sm:flex">
+          <Link href="/dashboard" className="btn-ghost px-3 py-2 text-sm">
+            Quiz
+          </Link>
+          <Link href="/dashboard/analytics" className="btn-ghost px-3 py-2 text-sm">
+            Analytics
+          </Link>
+          <Link href="/marketplace" className="btn-ghost px-3 py-2 text-sm">
+            Marketplace
+          </Link>
+        </nav>
+        <div className="flex items-center gap-3">
           {name && (
-            <span className="hidden text-sm text-ink/55 sm:inline">
-              Bonjour, <span className="font-semibold text-ink">{name}</span>
+            <span className="hidden text-sm text-ink-muted sm:inline">
+              {name}
             </span>
           )}
-          <button
-            onClick={logout}
-            className="font-display text-sm font-semibold text-ink/55 hover:text-brand"
-          >
+          <button onClick={logout} className="btn-ghost px-3 py-2 text-sm text-ink-muted">
             Déconnexion
           </button>
         </div>

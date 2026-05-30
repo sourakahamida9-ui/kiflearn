@@ -232,7 +232,7 @@ export default function HostPage({
 
   if (!session) {
     return (
-      <main className="grid min-h-dvh place-items-center bg-ink text-paper">
+      <main className="bg-panel-dark grid min-h-dvh place-items-center text-white">
         Chargement…
       </main>
     );
@@ -241,18 +241,18 @@ export default function HostPage({
   const totalAnswered = participants.length;
 
   return (
-    <main className="bg-grain min-h-dvh bg-ink px-5 py-6 text-paper">
+    <main className="bg-panel-dark min-h-dvh px-5 py-6 text-white">
       <div className="mx-auto max-w-4xl">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-display text-sm uppercase tracking-widest text-paper/40">
+            <p className="font-display text-sm uppercase tracking-widest text-white/40">
               KifLearn · Hôte
             </p>
             <h1 className="font-display text-2xl font-bold">{quizTitle}</h1>
           </div>
           <button
             onClick={() => router.push("/dashboard")}
-            className="text-sm text-paper/50 hover:text-paper"
+            className="text-sm text-white/50 hover:text-white"
           >
             Quitter
           </button>
@@ -261,7 +261,7 @@ export default function HostPage({
         {/* ---------- LOBBY ---------- */}
         {session.status === "lobby" && (
           <div className="mt-8 animate-pop-in text-center">
-            <p className="font-display uppercase tracking-widest text-paper/50">
+            <p className="font-display uppercase tracking-widest text-white/50">
               Code pour rejoindre
             </p>
             <div className="mx-auto mt-3 inline-block rounded-3xl bg-white px-10 py-6 shadow-card">
@@ -269,12 +269,19 @@ export default function HostPage({
                 {session.join_code}
               </span>
             </div>
-            <p className="mt-4 text-paper/60">
-              Va sur{" "}
-              <span className="font-semibold text-paper">
-                la page d&apos;accueil
-              </span>{" "}
-              et entre ce code.
+            <p className="mt-4 text-white/60">
+              {session.is_persistent ? (
+                <>
+                  Lien salon persistant :{" "}
+                  <span className="font-semibold text-white">
+                    /salon/{session.join_code}
+                  </span>
+                </>
+              ) : (
+                <>
+                  Va sur la page d&apos;accueil et entre ce code.
+                </>
+              )}
             </p>
 
             <div className="mt-8">
@@ -308,7 +315,7 @@ export default function HostPage({
         {/* ---------- QUESTION ACTIVE ---------- */}
         {session.status === "active" && currentQuestion && (
           <div className="mt-6 animate-slide-up">
-            <div className="flex items-center justify-between text-paper/60">
+            <div className="flex items-center justify-between text-white/60">
               <span className="font-display font-semibold">
                 Question {session.current_question_index + 1} /{" "}
                 {questions.length}

@@ -12,6 +12,12 @@ import {
   type PublicQuestion,
   type Session,
 } from "@/lib/types";
+import {
+  cacheQuestions,
+  getCachedQuestions,
+  isOnline,
+} from "@/lib/offline-cache";
+import { earnBadge } from "@/lib/badges";
 
 type Result = { is_correct: boolean; points: number };
 
@@ -32,7 +38,7 @@ export default function PlayPage({
   const [nowTs, setNowTs] = useState(Date.now());
   const submitting = useRef(false);
 
-  // Récupère l'identité locale
+  // Récupère l'identité locale + reconnexion auto
   useEffect(() => {
     if (!sessionId) return;
     const pid = localStorage.getItem(`kiflearn:participant:${sessionId}`);
@@ -41,8 +47,19 @@ export default function PlayPage({
       router.push("/join");
       return;
     }
+
     setParticipantId(pid);
     setName(nm ?? "");
+
+    const supabase = createClient();
+    supabase.rpc("rejoin_participant", { p_participant_id: pid }).then(({ data, error }) => {
+      if (error) {
+        router.push("/join");
+        return;
+      }
+      const p = Array.isArray(data) ? data[0] : data;
+      if (p?.user_name) setName(p.user_name);
+    });
   }, [sessionId, router]);
 
   // Chargement + abonnement realtime à la session
@@ -61,12 +78,24 @@ export default function PlayPage({
         return;
       }
       setSession(s);
-      const { data: qs } = await supabase
-        .from("questions_public")
-        .select("*")
-        .eq("quiz_id", s.quiz_id)
-        .order("position");
-      setQuestions(qs ?? []);
+
+      let qs: PublicQuestion[] | null = null;
+      if (isOnline()) {
+        const { data } = await supabase
+          .from("questions_public")
+          .select("*")
+          .eq("quiz_id", s.quiz_id)
+          .order("position");
+        qs = data ?? [];
+        if (qs.length) {
+          await cacheQuestions(s.quiz_id, qs);
+          earnBadge("offline_ready");
+        }
+      }
+      if (!qs?.length) {
+        qs = (await getCachedQuestions(s.quiz_id)) ?? [];
+      }
+      setQuestions(qs);
     })();
 
     const channel = supabase
@@ -155,7 +184,7 @@ export default function PlayPage({
 
   if (!session) {
     return (
-      <main className="grid min-h-dvh place-items-center bg-ink text-paper">
+      <main className="bg-panel-dark grid min-h-dvh place-items-center text-white">
         Chargement…
       </main>
     );
@@ -165,10 +194,10 @@ export default function PlayPage({
   const myPick = currentQuestion ? picked[currentQuestion.id] : undefined;
 
   return (
-    <main className="bg-grain min-h-dvh bg-ink px-5 py-6 text-paper">
+    <main className="bg-panel-dark min-h-dvh px-5 py-6 text-white">
       <div className="mx-auto flex min-h-[88dvh] max-w-lg flex-col">
         <div className="flex items-center justify-between">
-          <Logo className="text-lg text-paper" />
+          <Logo className="text-lg text-white" />
           <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold">
             {name}
           </span>
@@ -181,7 +210,7 @@ export default function PlayPage({
             <h1 className="mt-4 font-display text-3xl font-extrabold">
               Tu es dans la partie !
             </h1>
-            <p className="mt-2 text-paper/60">
+            <p className="mt-2 text-white/60">
               Attends que l&apos;enseignant démarre…
             </p>
           </div>
@@ -190,7 +219,7 @@ export default function PlayPage({
         {/* QUESTION ACTIVE */}
         {session.status === "active" && currentQuestion && (
           <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-between py-3 text-paper/60">
+            <div className="flex items-center justify-between py-3 text-white/60">
               <span className="font-display font-semibold">
                 Q{session.current_question_index + 1}
               </span>
@@ -211,7 +240,7 @@ export default function PlayPage({
                 <p className="mt-3 font-display text-xl font-bold">
                   Réponse envoyée !
                 </p>
-                <p className="mt-1 text-paper/60">Patiente pour les résultats…</p>
+                <p className="mt-1 text-white/60">Patiente pour les résultats…</p>
               </div>
             ) : (
               <div className="mt-5 grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
@@ -229,7 +258,7 @@ export default function PlayPage({
                   );
                 })}
                 {remaining === 0 && (
-                  <p className="col-span-full text-center text-paper/50">
+                  <p className="col-span-full text-center text-white/50">
                     Temps écoulé !
                   </p>
                 )}
@@ -245,7 +274,7 @@ export default function PlayPage({
               myResult.is_correct ? (
                 <>
                   <div className="animate-pop-in text-7xl">🎉</div>
-                  <h2 className="mt-4 font-display text-3xl font-extrabold text-ans-d">
+                  <h2 className="mt-4 font-display text-3xl font-extrabold text-brand">
                     Bonne réponse !
                   </h2>
                   <p className="mt-2 font-display text-2xl font-bold text-brand">
@@ -255,10 +284,10 @@ export default function PlayPage({
               ) : (
                 <>
                   <div className="animate-pop-in text-7xl">😬</div>
-                  <h2 className="mt-4 font-display text-3xl font-extrabold text-ans-a">
+                  <h2 className="mt-4 font-display text-3xl font-extrabold text-ink-muted">
                     Raté…
                   </h2>
-                  <p className="mt-2 text-paper/60">
+                  <p className="mt-2 text-white/60">
                     On se rattrape à la prochaine !
                   </p>
                 </>
@@ -289,7 +318,7 @@ export default function PlayPage({
             </h2>
             {finalRank && (
               <>
-                <p className="mt-2 text-paper/70">
+                <p className="mt-2 text-white/70">
                   {finalRank.rank}
                   <sup>
                     {finalRank.rank === 1 ? "er" : "e"}
@@ -299,12 +328,12 @@ export default function PlayPage({
                 <p className="mt-4 font-display text-5xl font-extrabold text-brand">
                   {finalRank.score}
                 </p>
-                <p className="text-paper/50">points</p>
+                <p className="text-white/50">points</p>
               </>
             )}
             <button
               onClick={() => router.push("/")}
-              className="btn-outline mt-8 bg-transparent text-paper"
+              className="btn-outline mt-8 bg-transparent text-white"
             >
               Retour à l&apos;accueil
             </button>

@@ -7,6 +7,9 @@ import { createClient } from "@/lib/supabase/client";
 import { TopBar } from "@/components/TopBar";
 import { ANSWER_META } from "@/components/AnswerTile";
 import { CHOICES, optionOf, type Choice } from "@/lib/types";
+import { AiQuizImport } from "@/components/AiQuizImport";
+import type { AiQuestionDraft } from "@/lib/ai-prompt";
+import { earnBadge } from "@/lib/badges";
 
 type Draft = {
   id: string;
@@ -38,6 +41,7 @@ export function QuizEditor({ quizId }: { quizId?: string }) {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
   const [questions, setQuestions] = useState<Draft[]>([blank()]);
   const [originalIds, setOriginalIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(isEdit);
@@ -55,6 +59,7 @@ export function QuizEditor({ quizId }: { quizId?: string }) {
       if (quiz) {
         setTitle(quiz.title);
         setDescription(quiz.description ?? "");
+        setIsPublic(!!quiz.is_public);
       }
       const { data: qs } = await supabase
         .from("questions")
@@ -78,6 +83,21 @@ export function QuizEditor({ quizId }: { quizId?: string }) {
       setLoading(false);
     })();
   }, [isEdit, quizId]);
+
+  function importAi(drafts: AiQuestionDraft[]) {
+    setQuestions(
+      drafts.map((d) => ({
+        id: crypto.randomUUID(),
+        question: d.question,
+        option_a: d.option_a,
+        option_b: d.option_b,
+        option_c: d.option_c,
+        option_d: d.option_d,
+        correct_answer: d.correct_answer,
+        time_limit: d.time_limit,
+      })),
+    );
+  }
 
   function update(i: number, patch: Partial<Draft>) {
     setQuestions((qs) => qs.map((q, idx) => (idx === i ? { ...q, ...patch } : q)));
@@ -117,7 +137,11 @@ export function QuizEditor({ quizId }: { quizId?: string }) {
     if (isEdit) {
       await supabase
         .from("quizzes")
-        .update({ title: title.trim(), description: description.trim() || null })
+        .update({
+          title: title.trim(),
+          description: description.trim() || null,
+          is_public: isPublic,
+        })
         .eq("id", quizId);
     } else {
       const { data, error } = await supabase
@@ -126,6 +150,7 @@ export function QuizEditor({ quizId }: { quizId?: string }) {
           title: title.trim(),
           description: description.trim() || null,
           creator_id: user.id,
+          is_public: isPublic,
         })
         .select("id")
         .single();
@@ -164,19 +189,20 @@ export function QuizEditor({ quizId }: { quizId?: string }) {
       await supabase.from("questions").delete().in("id", toDelete);
     }
 
+    if (isPublic) earnBadge("marketplace");
     router.push("/dashboard");
   }
 
   if (loading)
     return (
-      <main className="min-h-dvh bg-paper">
+      <main className="min-h-dvh bg-mesh">
         <TopBar />
         <p className="mx-auto max-w-3xl px-5 py-10 text-ink/50">Chargement…</p>
       </main>
     );
 
   return (
-    <main className="min-h-dvh bg-paper">
+    <main className="min-h-dvh bg-mesh">
       <TopBar />
       <div className="mx-auto max-w-3xl px-5 py-8">
         <Link href="/dashboard" className="text-sm text-ink/50 hover:text-ink">
@@ -199,7 +225,18 @@ export function QuizEditor({ quizId }: { quizId?: string }) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+          <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold text-ink/70">
+            <input
+              type="checkbox"
+              checked={isPublic}
+              onChange={(e) => setIsPublic(e.target.checked)}
+              className="h-5 w-5 rounded border-2 border-ink/20 accent-brand"
+            />
+            Publier sur la marketplace
+          </label>
         </div>
+
+        {!isEdit && <AiQuizImport onImport={importAi} />}
 
         <div className="mt-6 space-y-5">
           {questions.map((q, i) => (
@@ -230,7 +267,7 @@ export function QuizEditor({ quizId }: { quizId?: string }) {
                       onClick={() =>
                         setQuestions((qs) => qs.filter((_, idx) => idx !== i))
                       }
-                      className="text-sm font-semibold text-ans-a hover:underline"
+                      className="text-sm font-semibold text-brand-deep hover:underline"
                     >
                       Supprimer
                     </button>
@@ -251,7 +288,7 @@ export function QuizEditor({ quizId }: { quizId?: string }) {
                     key={c}
                     className={`flex items-center gap-2 rounded-2xl border-2 p-2 transition-colors ${
                       q.correct_answer === c
-                        ? "border-ans-d bg-ans-d/5"
+                        ? "border-brand bg-brand-light"
                         : "border-ink/10"
                     }`}
                   >
@@ -275,7 +312,7 @@ export function QuizEditor({ quizId }: { quizId?: string }) {
                       title="Marquer comme bonne réponse"
                       className={`shrink-0 rounded-lg px-2 py-1 text-xs font-bold ${
                         q.correct_answer === c
-                          ? "bg-ans-d text-white"
+                          ? "bg-brand text-white"
                           : "bg-ink/5 text-ink/45 hover:bg-ink/10"
                       }`}
                     >
