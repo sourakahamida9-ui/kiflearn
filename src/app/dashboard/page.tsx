@@ -59,6 +59,15 @@ export default function Dashboard() {
         publicQuizCount: publicCount,
       });
 
+      const { error: v2err } = await supabase
+        .from("quizzes")
+        .select("is_public")
+        .limit(1);
+      if (v2err) {
+        router.push("/setup");
+        return;
+      }
+
       setLoading(false);
     })();
   }, [router]);
